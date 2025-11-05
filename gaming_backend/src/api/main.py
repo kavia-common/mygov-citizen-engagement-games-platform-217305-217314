@@ -15,6 +15,8 @@ app = FastAPI(
     version="0.1.0",
     openapi_tags=[
         {"name": "Health", "description": "Service health and status endpoints."},
+        {"name": "Auth", "description": "Mock authentication endpoints for development."},
+        {"name": "Users", "description": "User profile endpoints."},
         {"name": "Database", "description": "Database related helpers and diagnostics."},
     ],
 )
@@ -31,6 +33,7 @@ app.add_middleware(
 _db_conn: Optional[sqlite3.Connection] = None
 
 
+# PUBLIC_INTERFACE
 def get_db_conn() -> sqlite3.Connection:
     """Dependency to get a live DB connection; raises 503 if unavailable."""
     if _db_conn is None:
@@ -121,3 +124,11 @@ def service_status() -> JSONResponse:
     """Return a lightweight service status without touching the DB."""
     db_state = "initialized" if _db_conn is not None else "unavailable"
     return JSONResponse({"status": "ok", "database": db_state})
+
+
+# Register routers
+from src.api.routes.auth import router as auth_router  # noqa: E402
+from src.api.routes.users import router as users_router  # noqa: E402
+
+app.include_router(auth_router)
+app.include_router(users_router)
