@@ -18,6 +18,8 @@ app = FastAPI(
         {"name": "Auth", "description": "Mock authentication endpoints for development."},
         {"name": "Users", "description": "User profile endpoints."},
         {"name": "Games", "description": "Game catalog and scoring endpoints."},
+        {"name": "Leaderboard", "description": "Leaderboard endpoints for top and per-user rankings."},
+        {"name": "Analytics", "description": "Analytics ingestion and reporting endpoints."},
         {"name": "Database", "description": "Database related helpers and diagnostics."},
     ],
 )
@@ -131,7 +133,11 @@ def service_status() -> JSONResponse:
 from src.api.routes.auth import router as auth_router  # noqa: E402
 from src.api.routes.users import router as users_router  # noqa: E402
 from src.api.routes.games import router as games_router  # noqa: E402
+from src.api.routes.leaderboard import router as leaderboard_router  # noqa: E402
+from src.api.routes.analytics import router as analytics_router  # noqa: E402
 
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(games_router)
+app.include_router(leaderboard_router)
+app.include_router(analytics_router)
