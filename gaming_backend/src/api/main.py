@@ -2,7 +2,7 @@ from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 import sqlite3
 
@@ -21,6 +21,7 @@ app = FastAPI(
         {"name": "Leaderboard", "description": "Leaderboard endpoints for top and per-user rankings."},
         {"name": "Analytics", "description": "Analytics ingestion and reporting endpoints."},
         {"name": "Database", "description": "Database related helpers and diagnostics."},
+        {"name": "WebSocket", "description": "Real-time endpoints over WebSocket (e.g., leaderboard updates)."},
     ],
 )
 
@@ -135,9 +136,50 @@ from src.api.routes.users import router as users_router  # noqa: E402
 from src.api.routes.games import router as games_router  # noqa: E402
 from src.api.routes.leaderboard import router as leaderboard_router  # noqa: E402
 from src.api.routes.analytics import router as analytics_router  # noqa: E402
+from src.api.routes.ws import router as ws_router  # noqa: E402
 
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(games_router)
 app.include_router(leaderboard_router)
 app.include_router(analytics_router)
+app.include_router(ws_router)
+
+
+# PUBLIC_INTERFACE
+@app.get(
+    "/docs/websocket-help",
+    summary="WebSocket Usage Help",
+    description="Instructions on how to consume the real-time leaderboard WebSocket. Connect to ws(s)://<host>/ws/leaderboard with optional ?game_id=ID to subscribe to a specific game's updates. Server sends JSON messages with event='leaderboard_update'. Send 'ping' to receive 'pong' keepalive.",
+    tags=["WebSocket"],
+    response_class=PlainTextResponse,
+)
+def websocket_help() -> PlainTextResponse:
+    """Human-readable instructions for the WebSocket endpoint.
+
+    Returns a plaintext description containing:
+    - Endpoint URL and query parameters
+    - Message format and event names
+    - Keepalive behavior
+    """
+    text = (
+        "Leaderboard WebSocket Usage\n"
+        "\n"
+        "Endpoint:\n"
+        "  ws://<host>/ws/leaderboard  (or wss:// in production)\n"
+        "\n"
+        "Query Parameters:\n"
+        "  game_id (optional): Subscribe only to updates for this game. If omitted, receive all updates.\n"
+        "\n"
+        "Server -> Client Messages (JSON):\n"
+        '  {"event":"leaderboard_update","game_id":<int>,"payload":{"inserted":{...},"stats":{...}}}\n'
+        "    - inserted: the newly recorded score\n"
+        "    - stats: updated aggregate info like total_scores and top_score\n"
+        "\n"
+        "Client -> Server Messages:\n"
+        "  'ping' (text) -> server replies with 'pong'. Other messages are ignored.\n"
+        "\n"
+        "Close Behavior:\n"
+        "  When the client disconnects, it is automatically unsubscribed.\n"
+    )
+    return PlainTextResponse(text)

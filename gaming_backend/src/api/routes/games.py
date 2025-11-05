@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field, field_validator
 
 from src.api.main import get_db_conn
+# Import the WebSocket notifier to broadcast leaderboard updates
+from src.api.routes.ws import notify_leaderboard_update
 
 router = APIRouter(prefix="/games", tags=["Games"])
 
@@ -336,6 +338,27 @@ def post_game_score(
     try:
         inserted = _insert_score(db, game_id, payload.user_id, payload.score)
         stats = _score_stats(db, game_id)
+
+        # Fire-and-forget notify; do not block API response on broadcast
+        try:
+            # Prepare a concise payload for clients (recent insert + stats)
+            update_payload: Dict[str, Any] = {
+                "inserted": inserted.model_dump(),
+                "stats": stats,
+            }
+            # Schedule the coroutine; if no loop or context, ignore failures silently
+            import asyncio
+
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                loop.create_task(notify_leaderboard_update(game_id, update_payload))
+            else:
+                # In rare cases where called without running loop
+                asyncio.run(notify_leaderboard_update(game_id, update_payload))
+        except Exception:
+            # Do not fail the API if broadcasting encounters any error
+            pass
+
         return PostScoreResponse(game=game, inserted=inserted, stats=stats)
     except sqlite3.IntegrityError as e:
         # likely foreign key or constraints; though users table is not FK here
