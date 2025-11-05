@@ -17,6 +17,7 @@ app = FastAPI(
         {"name": "Health", "description": "Service health and status endpoints."},
         {"name": "Auth", "description": "Mock authentication endpoints for development."},
         {"name": "Users", "description": "User profile endpoints."},
+        {"name": "Games", "description": "Game catalog and scoring endpoints."},
         {"name": "Database", "description": "Database related helpers and diagnostics."},
     ],
 )
@@ -129,6 +130,8 @@ def service_status() -> JSONResponse:
 # Register routers
 from src.api.routes.auth import router as auth_router  # noqa: E402
 from src.api.routes.users import router as users_router  # noqa: E402
+from src.api.routes.games import router as games_router  # noqa: E402
 
 app.include_router(auth_router)
 app.include_router(users_router)
+app.include_router(games_router)
